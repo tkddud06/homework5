@@ -3,7 +3,7 @@
  *  Data Structures, Homework #5
  *  School of Computer Science at Chungbuk National University
  */
-// 요구사항을 만족시킨 후, 기능이 조금 부족하다는 생각이 들어서 Full 상황에서의 더블링 기능도 dequeue를 재활용해서 간단하게 넣어봤습니다.
+// 기존 코드서 부족한 부분 수정 : 요구사항을 만족시킨 후, 기능이 조금 부족하다는 생각이 들어서 Full 상황에서의 더블링 기능도 dequeue를 활용해서 넣어봤습니다.
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -39,6 +39,7 @@ int main(void)
 		printf("------------------------------------------------------\n");
 		printf(" Insert=i,  Delete=d,   PrintQ=p,   Debug=b,   Quit=q \n");
 		printf("------------------------------------------------------\n");
+		printf("[--------------  [최상영]  	[2022041062]  --------------]\n");
 
 		printf("Command = ");
 		scanf(" %c", &command);
@@ -71,7 +72,6 @@ int main(void)
 
 	}while(command != 'q' && command != 'Q');
 
-	printf("[-----  [최상영]    [2022041062]  -----]");
 
 	return 1;
 }
@@ -84,11 +84,13 @@ QueueType *createQueue() // QueueType 구조체를 힙에 동적할당한 후, 그를 가리키는
 	cQ->front = 0;
 	cQ->rear = 0; // 처음의 front와 rear은 둘다 0으로 초기화
 	cQ->queue = (element*)malloc(sizeof(element) * MAX_QUEUE_SIZE);
+
 	// 큐에 내용 삽입 전, debug시 초기화가 안 되서 이상한 값이 들어있는 것을 제거하기 위한 절차 추가
 	for(i = 0; i < MAX_QUEUE_SIZE; i++)
 	{
 		cQ->queue[i] = '\0';
 	}
+
 	return cQ;
 }
 
@@ -101,7 +103,7 @@ QueueType *queue_double(QueueType *cQ)
 	re_cQ = (QueueType *)malloc(sizeof(QueueType));
 	re_cQ->front = 0;
 	re_cQ->rear = MAX_QUEUE_SIZE-1; // front와 rear의 위치 재조정
-	re_cQ->queue = (element*)malloc(sizeof(element) * re_max_queue_size);
+	re_cQ->queue = (element*)malloc(sizeof(element) * re_max_queue_size); // 새로운 큐 공간 동적할당
 
 	// 기존 내용 옮기고, debug시 이상한 값 들어있는 것을 제거하기 위한 절차 수행
 	re_cQ->queue[0] = '\0'; // front 부분
@@ -112,7 +114,7 @@ QueueType *queue_double(QueueType *cQ)
 		re_cQ->queue[i] = item;
 	}
 
-	for(i = re_cQ->rear+1; i < re_max_queue_size; i++) // debug시 이상한 값 들어있는 것을 제거하기 위한 절차 수행
+	for(i = re_cQ->rear+1; i < re_max_queue_size; i++)
 	{
 		re_cQ->queue[i] = '\0';
 	}
@@ -180,7 +182,7 @@ void deQueue(QueueType *cQ, element *item)
     if(!isEmpty(cQ))
 	{
 		*item = cQ->queue[(cQ->front+1)%MAX_QUEUE_SIZE];
-		cQ->queue[(cQ->front+1)%MAX_QUEUE_SIZE] = '\0'; 	// debug시 값이 그대로 남는 것을 제거하기 위한 절차 추가 (그렇기 때문에 교수님 영상의 결과와는 조금의 차이가 있습니다.)
+		// cQ->queue[(cQ->front+1)%MAX_QUEUE_SIZE] = '\0'; 	// debug시 값이 그대로 남는 것을 제거하기 위한 절차 추가 (그렇기 때문에 교수님 영상의 결과와는 조금의 차이가 있습니다.)
 		cQ->front = (cQ->front+1)%MAX_QUEUE_SIZE;
 	}
 	else
@@ -200,7 +202,7 @@ void printQ(QueueType *cQ)
 	printf("Circular Queue : [");
 
 	i = first;
-	while(i != last){ // 현재 큐가 가진 모든 데이터를 출력하는 while문
+	while(i != last){ // 현재 큐가 가진 모든 데이터를 출력하는 while문 
 		printf("%3c", cQ->queue[i]);
 		i = (i+1)%MAX_QUEUE_SIZE;
 
@@ -209,7 +211,7 @@ void printQ(QueueType *cQ)
 }
 
 
-void debugQ(QueueType *cQ) // 실제 가지고있는 원소와 무관하게, 빈공간을 포함하여 front와 tail의 위치, 그리고 큐 전체의 상태를 확인할 수 있는 함수
+void debugQ(QueueType *cQ) // 실제 가지고있는 원소를 포함하여, 빈공간을 포함하여 front와 tail의 위치, 그리고 큐 전체의 상태를 확인할 수 있는 함수
 {
 
 	printf("\n---DEBUG\n");

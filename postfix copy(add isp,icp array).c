@@ -3,6 +3,7 @@
  * ?Data Structures, Homework #5
  * ?School of Computer Science at Chungbuk National University
  */
+// 기존 코드서 부족한 부분 수정 : isp, icp 배열을 추가하여, '('로 인한 코드의 복잡성을 줄였습니다.
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -11,16 +12,24 @@
 #define MAX_STACK_SIZE 10
 #define MAX_EXPRESSION_SIZE 20
 
-/* stack 내에서 우선순위, lparen = 0 가장 낮음 */
+// stack 내에서 우선순위, lparen = 0 가장 낮음. 기존 원래 코드의 우선순위
 typedef enum{
-	lparen = 0,  /* ( 왼쪽 괄호 */
-	rparen = 9,  /* ) 오른쪽 괄호*/
-	times = 6,   /* * 곱셈 */
-	divide = 6,  /* / 나눗셈 */
-	plus = 4,    /* + 덧셈 */
-	minus = 4,   /* - 뺄셈 */ // plus와 minus, 그리고 times와 divide를 다른 우선순위로 구분하게 되면, 오류 발생할 수 있다.
-	operand = 1 /* 피연산자 */
+	lparen,  // ( 왼쪽 괄호 
+	rparen,  // ) 오른쪽 괄호
+	plus,    // + 덧셈 
+	minus,   // - 뺄셈 
+	divide,  // / 나눗셈 
+	times,   // * 곱셈 
+	operand // 피연산자 
 } precedence;
+
+// 0,10 : isp내에서와 icp 내에서의 왼쪽 괄호 우선순위
+// 1 : 오른쪽 괄호 우선순위
+// 2 : +, - 우선순위
+// 3 : *, / 우선순위
+// -1 : operand 우선순위 
+static int isp[7] = {0,1,2,2,3,3,-1}; // in-stack precedence
+static int icp[7] = {10,1,2,2,3,3,-1}; // incoming precedence 
 
 char infixExp[MAX_EXPRESSION_SIZE];   	/* infix expression을 저장하는 배열 */
 char postfixExp[MAX_EXPRESSION_SIZE];	/* postfix로 변경된 문자열을 저장하는 배열 */
@@ -133,8 +142,8 @@ precedence getToken(char symbol)
 	case ')' : return rparen;
 	case '+' : return plus;
 	case '-' : return minus;
-	case '/' : return divide;
 	case '*' : return times;
+	case '/' : return divide;
 	default : return operand;
 	}
 }
@@ -176,13 +185,9 @@ void toPostfix()
 		{
 			charCat(&x);
 		}
-		else if (current_priority == lparen) // 현재 x가 '('라면
-		{ // 스택에 추가하기
-			postfixPush(x);
-		}
 		else if(current_priority == rparen) // 현재 x가 만약 ')'라면
 		{
-			while(getPriority(postfixStack[postfixStackTop]) != lparen) // '(' 이후의 모든 스택에 쌓인 연산자 빼내기
+			while(getPriority(postfixStack[postfixStackTop]) != isp[lparen]) // '(' 이후의 모든 스택에 쌓인 연산자 빼내기
 			{
 				temp = postfixPop();
 				charCat(&temp);
@@ -193,7 +198,7 @@ void toPostfix()
 		{
 			// 스택이 비어있지 않으며, 현재 x의 우선순위가 현재 포스트픽스 스택의 탑 내용물보다 작은(느린) 나머지 경우에만
 			// 포스트픽스스택의 탑 내용물 우선순위가 x의 우선순위보다 작아지거나 다 뽑을 때까지 모두 빼내고, 현재 x는 포스트픽스 스택에 넣기
-			while(postfixStackTop != -1 && (getPriority(postfixStack[postfixStackTop]) >= current_priority))
+			while(postfixStackTop != -1 && (isp[getPriority(postfixStack[postfixStackTop])] >= icp[current_priority]))
 			{
 				temp = postfixPop();
 				charCat(&temp);
@@ -210,7 +215,6 @@ void toPostfix()
 		charCat(&temp);
 	}
 
-	/* 필요한 로직 완성 */
 
 }
 void debug()
@@ -292,8 +296,8 @@ void evaluation()
 				}
 		}
 
-
 		exp += 1;
+
 	}
 
 	evalResult = evalPop();
