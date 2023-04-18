@@ -3,24 +3,35 @@
  * ?Data Structures, Homework #5
  * ?School of Computer Science at Chungbuk National University
  */
+// 기존 코드서 부족한 부분 수정 : isp, icp 배열을 추가하여, '('로 인한 코드의 복잡성을 줄였습니다.
 
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 
-#define MAX_STACK_SIZE 10
-#define MAX_EXPRESSION_SIZE 20
+#define MAX_STACK_SIZE 10 // 스택의 MAX 사이즈
+#define MAX_EXPRESSION_SIZE 20 // 받을 수 있는 식의 MAX 사이즈 20글자까지.
 
-/* stack 내에서 우선순위, lparen = 0 가장 낮음 */
+// stack 내에서 우선순위, lparen = 0 가장 낮음. 기존 원래 코드의 우선순위
 typedef enum{
-	lparen = 0,  /* ( 왼쪽 괄호 */
-	rparen = 9,  /* ) 오른쪽 괄호*/
-	times = 6,   /* * 곱셈 */
-	divide = 6,  /* / 나눗셈 */
-	plus = 4,    /* + 덧셈 */
-	minus = 4,   /* - 뺄셈 */ // plus와 minus, 그리고 times와 divide를 다른 우선순위로 구분하게 되면, 오류 발생할 수 있다.
-	operand = 1 /* 피연산자 */
+	lparen,  // ( 왼쪽 괄호 
+	rparen,  // ) 오른쪽 괄호
+	plus,    // + 덧셈 
+	minus,   // - 뺄셈 
+	divide,  // / 나눗셈 
+	times,   // * 곱셈 
+	operand // 피연산자 
 } precedence;
+
+// 0,10 : isp내에서와 icp 내에서의 왼쪽 괄호 우선순위 
+// 왼쪽 괄호의 우선순위를 다르게 하지 않으면, 
+// 의도치 않은 연산이 일어나는 것을 막기 위해 postfix 연산에서 '('에 대해 추가적인 조건이 필요해진다.
+// 1 : 오른쪽 괄호 우선순위
+// 2 : +, - 우선순위
+// 3 : *, / 우선순위
+// -1 : operand 우선순위 
+static int isp[7] = {0,1,2,2,3,3,-1}; // in-stack precedence
+static int icp[7] = {10,1,2,2,3,3,-1}; // incoming precedence 
 
 char infixExp[MAX_EXPRESSION_SIZE];   	/* infix expression을 저장하는 배열 */
 char postfixExp[MAX_EXPRESSION_SIZE];	/* postfix로 변경된 문자열을 저장하는 배열 */
@@ -32,18 +43,18 @@ int evalStackTop = -1;	   /* evalStack용 top */
 
 int evalResult = 0;	   /* 계산 결과를 저장 */
 
-void postfixpush(char x);
-char postfixPop();
-void evalPush(int x);
-int evalPop();
-void getInfix();
-precedence getToken(char symbol);
-precedence getPriority(char x);
-void charCat(char* c);
-void toPostfix();
-void debug();
-void reset();
-void evaluation();
+void postfixpush(char x); // postfix로 변환을 할 때 쓰는 스택에 푸시하는 함수
+char postfixPop(); // postfix로 변환을 할 때 쓰는 스택에서 팝하는 함수
+void evalPush(int x); // 계산을 할 때 쓰는 스택에 푸시하는 함수
+int evalPop(); // 계산을 할 때 쓰는 스택에 푸시하는 함수
+void getInfix(); // 중위표기식을 입력받는 함수
+precedence getToken(char symbol); // 우선순위를 얻기 위한 함수
+precedence getPriority(char x); // 우선순위를 얻기 위한 함수
+void charCat(char* c); // postfix 변환을 할 때 쓰는 함수로, 문자를 덧붙여준다
+void toPostfix(); // postfix 변환 함수
+void debug(); // 디버그용 함수
+void reset(); // 리셋 함수
+void evaluation(); // 계산 함수
 
 int main()
 {
@@ -57,63 +68,63 @@ int main()
 		printf("----------------------------------------------------------------\n");
 		printf("[--------------  [최상영]  	[2022041062]  --------------]\n");
 		printf("Command = ");
-		scanf(" %c", &command);
+		scanf(" %c", &command); // command 변수 입력받기
 
-		switch(command) {
+		switch(command) { // 입력받은 command 변수로 실행할 기능 구분 switch
 		case 'i': case 'I':
-			getInfix();
+			getInfix(); // 중위표기식 입력받기
 			break;
 		case 'p': case 'P':
-			toPostfix();
+			toPostfix(); // postfix 변환하기
 			break;
 		case 'e': case 'E':
-			evaluation();
+			evaluation(); // 변환된 후위표기식 계산하기
 			break;
 		case 'd': case 'D':
-			debug();
+			debug(); // 디버그하기
 			break;
 		case 'r': case 'R':
-			reset();
+			reset(); // 리셋하기
 			break;
-		case 'q': case 'Q':
+		case 'q': case 'Q': // 종료
 			break;
 		default:
-			printf("\n       >>>>>   Concentration!!   <<<<<     \n");
+			printf("\n       >>>>>   Concentration!!   <<<<<     \n"); // 이외 고려하지 않은 상황시 Concentration!! 출력
 			break;
 		}
 
-	}while(command != 'q' && command != 'Q');
+	}while(command != 'q' && command != 'Q'); // q 받으면 종료
 
-	return 1;
+	return 0; // 리턴 1이였는데, 정상종료를 알리기 위해 리턴 0으로 변경
 }
 
-void postfixPush(char x)
+void postfixPush(char x) 
 {
-    postfixStack[++postfixStackTop] = x;
+    postfixStack[++postfixStackTop] = x; // postfix 변환을 위한 스택에 데이터 추가
 }
 
 char postfixPop()
 {
     char x;
-    if(postfixStackTop == -1)
+    if(postfixStackTop == -1) // 추출할 데이터가 없다면 '\0' 리턴
         return '\0';
     else {
-    	x = postfixStack[postfixStackTop--];
+    	x = postfixStack[postfixStackTop--]; // postfix 변환을 위한 스택에서 데이터 추출
     }
     return x;
 }
 
 void evalPush(int x)
 {
-    evalStack[++evalStackTop] = x;
+    evalStack[++evalStackTop] = x; // 계산을 위한 스택에 데이터 추가
 }
 
 int evalPop()
 {
-    if(evalStackTop == -1)
+    if(evalStackTop == -1) // 추출할 데이터가 없다면 '-1' 리턴
         return -1;
     else
-        return evalStack[evalStackTop--];
+        return evalStack[evalStackTop--]; // 계산을 위한 스택에서 데이터 추출
 }
 
 /**
@@ -133,25 +144,25 @@ precedence getToken(char symbol)
 	case ')' : return rparen;
 	case '+' : return plus;
 	case '-' : return minus;
-	case '/' : return divide;
 	case '*' : return times;
+	case '/' : return divide;
 	default : return operand;
-	}
+	} // 문자에 해당하는 우선순위를 리턴함
 }
 
 precedence getPriority(char x)
 {
-	return getToken(x);
+	return getToken(x); // gettoken 함수를 호출해서, 우선순위를 받아옴
 }
 
 /**
  * 문자하나를 전달받아, postfixExp에 추가
  */
-void charCat(char* c)
+void charCat(char* c) // postfix 변환을 할 때 쓰는 함수로, 문자를 덧붙여준다
 {
-	if (postfixExp == '\0')
+	if (postfixExp == '\0') // 비어있을땐 strncpy를 통해 복사 연산으로서 내용을 넣음
 		strncpy(postfixExp, c, 1);
-	else
+	else // 일반적인 상황에서는 원래 있는 postfixExp에 매개변수로 받은 문자를 뒤에 연결함.
 		strncat(postfixExp, c, 1);
 }
 
@@ -165,24 +176,20 @@ void toPostfix()
 	char *exp = infixExp;
 	char x; /* 문자하나를 임시로 저장하기 위한 변수 */
 	char temp; // 임시 변수 2
-	precedence current_priority;
+	precedence current_priority; // 현재 문자(x)의 우선순위를 나타내줄 변수
 
 	/* exp를 증가시켜가면서, 문자를 읽고 postfix로 변경 */
-	while(*exp != '\0')
+	while(*exp != '\0') // 중위표기식을 끝까지 다 읽을 때까지 진행
 	{
-		x = *exp;
-		current_priority = getPriority(x);
+		x = *exp; // 문자 받아옴
+		current_priority = getPriority(x); // 우선순위 구해옴
 		if(current_priority == operand) // operand면 우선적으로 바로 postFixExp에 넣기
 		{
 			charCat(&x);
 		}
-		else if (current_priority == lparen) // 현재 x가 '('라면
-		{ // 스택에 추가하기
-			postfixPush(x);
-		}
 		else if(current_priority == rparen) // 현재 x가 만약 ')'라면
 		{
-			while(getPriority(postfixStack[postfixStackTop]) != lparen) // '(' 이후의 모든 스택에 쌓인 연산자 빼내기
+			while(getPriority(postfixStack[postfixStackTop]) != isp[lparen]) // '(' 이후의 모든 스택에 쌓인 연산자 빼내기
 			{
 				temp = postfixPop();
 				charCat(&temp);
@@ -191,13 +198,14 @@ void toPostfix()
 		}
 		else
 		{
-			// 스택이 비어있지 않으며, 현재 x의 우선순위가 현재 포스트픽스 스택의 탑 내용물보다 작은(느린) 나머지 경우에만
-			// 포스트픽스스택의 탑 내용물 우선순위가 x의 우선순위보다 작아지거나 다 뽑을 때까지 모두 빼내고, 현재 x는 포스트픽스 스택에 넣기
-			while(postfixStackTop != -1 && (getPriority(postfixStack[postfixStackTop]) >= current_priority))
+			// 스택이 비어있지 않으며, 현재 x의 우선순위가 현재 포스트픽스 스택의 탑 내용물보다 작거나 같은(느리거나 같은) 경우에는
+			// 포스트픽스스택의 탑 내용물 우선순위가 x의 우선순위보다 작아지거나, 내용물이 없을 때까지 모두 빼낸다
+			// 이후 현재 x는 포스트픽스 스택에 삽입하기
+			while(postfixStackTop != -1 && (isp[getPriority(postfixStack[postfixStackTop])] >= icp[current_priority]))
 			{
 				temp = postfixPop();
 				charCat(&temp);
-			} 
+			} // 스택이 비어있거나, x의 우선순위가 스택 내에 탑 내용물의 우선순위보다 크다면, 바로 스택에 삽입된다.
 			postfixPush(x);
 		} 
 
@@ -210,11 +218,10 @@ void toPostfix()
 		charCat(&temp);
 	}
 
-	/* 필요한 로직 완성 */
 
 }
 void debug()
-{
+{ // 각각 중위표기식, 후위표기식, 후위표기식 계산 결과, postfixstack의 상태를 출력해준다
 	printf("\n---DEBUG\n");
 	printf("infixExp =  %s\n", infixExp);
 	printf("postExp =  %s\n", postfixExp);
@@ -229,7 +236,7 @@ void debug()
 }
 
 void reset()
-{
+{ // 모든 값들을 초기화해준다.
 	infixExp[0] = '\0';
 	postfixExp[0] = '\0';
 
@@ -249,18 +256,19 @@ void evaluation()
 	char x; /* 문자하나를 임시로 저장하기 위한 변수 */
 	int num1, num2; // 연산을 위한 변수
 
-	/* exp를 증가시켜가면서, 문자를 읽고 postfix로 변경 */
-	while(*exp != '\0')
+	// exp를 증가시켜가면서, 문자를 읽고 x에 저장한다
+	while(*exp != '\0') // 후위표기식을 끝까지 다 읽을 때까지 진행
 	{
 		x = *exp;
 		if(getPriority(x) == operand)
 		{
-			evalPush(x-48); // operand라면, 숫자로 변환해서 스택에 추가
+			evalPush(x-48); // x가 operand라면, 숫자로 변환해서 스택에 추가
 		}
 		else // 아닌 경우는, 연산 진행
 		{
 				switch(x) 
-				{
+				{ // 숫자를 스택에서 2개 뽑아와서 각각 연산자 케이스에 맞는 연산을 진행하고, 
+				// 다시 스택에 연산 결과 삽입
 					case '+' :
 					{
 						num2 = evalPop();
@@ -292,10 +300,10 @@ void evaluation()
 				}
 		}
 
-
 		exp += 1;
+
 	}
 
-	evalResult = evalPop();
+	evalResult = evalPop(); // 모든 연산이 끝나고, 마지막에 남은 수가 전체 연산의 결과임.
 	/* postfixExp, evalStack을 이용한 계산 */
 }
